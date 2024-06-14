@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from 'react';
-
 import { toast } from 'react-toastify';
 
 import {
@@ -12,7 +11,7 @@ import {
 import { useGame } from '@/common/hooks/useGame';
 import { usePeers } from '@/common/hooks/usePeers';
 import { decoder } from '@/common/libs/decoder';
-import { socket } from '@/common/libs/socket';
+import { socket } from '@/common/libs/socket'; // Assuming this is where socket is imported from
 import {
   Data,
   DataType,
@@ -41,10 +40,8 @@ const Movables = () => {
   const [playersPositions, setPlayersPositions] = useState<{
     [key: string]: [number, number, number];
   }>({});
-  const [ballPosition, setBallPosition] = useState<[number, number]>([
-    100, 100,
-  ]);
-  const [spectating, setSpectating] = useState(socket.id);
+  const [ballPosition, setBallPosition] = useState<[number, number]>([100, 100]);
+  const [spectating, setSpectating] = useState<string>(''); // Initialize spectating with an empty string
 
   const direction = useKeysDirection();
   const shoot = useShoot();
@@ -56,72 +53,69 @@ const Movables = () => {
   );
 
   useEffect(() => {
-    if (admin.id !== socket.id) {
-      if (adminPeer) {
-        adminPeer.on('data', (data: Uint8Array) => {
-          const parsedData = JSON.parse(decoder.decode(data)) as Data;
+    const handleData = (data: Uint8Array) => {
+      try {
+        const parsedData = JSON.parse(decoder.decode(data)) as Data;
 
-          if (parsedData.type === DataType.POSITIONS) {
-            const dataTyped = parsedData as PositionData;
-            setPlayersPositions(dataTyped.positions);
-            setBallPosition(dataTyped.ballPosition);
-          } else if (parsedData.type === DataType.GAME) {
-            const gameFromAdmin = (parsedData as GameData).game;
-            const playersFromAdmin = new Map(gameFromAdmin.players);
+        if (parsedData.type === DataType.POSITIONS) {
+          const dataTyped = parsedData as PositionData;
+          setPlayersPositions(dataTyped.positions);
+          setBallPosition(dataTyped.ballPosition);
+        } else if (parsedData.type === DataType.GAME) {
+          const gameFromAdmin = (parsedData as GameData).game;
+          const playersFromAdmin = new Map(gameFromAdmin.players);
 
-            const oldMe = game.players.get(socket.id);
-            const newMe = playersFromAdmin.get(socket.id);
+          const oldMe = socket.id ? game.players.get(socket.id) : undefined;
+          const newMe = socket.id ? playersFromAdmin.get(socket.id) : undefined;
 
-            if (oldMe && oldMe?.team !== newMe?.team) {
-              if (newMe?.team === PlayerTeam.SPECTATOR)
-                toast('You are now spectator', {
-                  type: 'info',
-                });
-              else if (oldMe)
-                toast(
-                  `You are now in ${
-                    newMe?.team === PlayerTeam.RED ? 'red' : 'blue'
-                  } team`,
-                  {
-                    type: 'info',
-                  }
-                );
-            }
-
-            setGame({
-              ...gameFromAdmin,
-              players: playersFromAdmin,
-            });
-          } else if (parsedData.type === DataType.PLAYER_JOIN_LEFT) {
-            const typedData = parsedData as PlayerJoinLeftData;
-
-            toast(
-              `${typedData.name} ${
-                typedData.join ? 'joined' : 'left'
-              } the game`,
-              {
+          if (oldMe && oldMe?.team !== newMe?.team) {
+            if (newMe?.team === PlayerTeam.SPECTATOR) {
+              toast('You are now a spectator', {
                 type: 'info',
-              }
-            );
+              });
+            } else if (oldMe) {
+              toast(
+                `You are now in ${newMe?.team === PlayerTeam.RED ? 'red' : 'blue'} team`,
+                {
+                  type: 'info',
+                }
+              );
+            }
           }
-        });
+
+          setGame({
+            ...gameFromAdmin,
+            players: playersFromAdmin,
+          });
+        } else if (parsedData.type === DataType.PLAYER_JOIN_LEFT) {
+          const typedData = parsedData as PlayerJoinLeftData;
+
+          toast(
+            `${typedData.name} ${typedData.join ? 'joined' : 'left'} the game`,
+            {
+              type: 'info',
+            }
+          );
+        }
+      } catch (error) {
+        console.error('Error parsing data:', error);
       }
+    };
+
+    if (admin.id && admin.id !== socket.id && adminPeer) {
+      adminPeer.on('data', handleData);
 
       return () => {
-        if (adminPeer) {
-          adminPeer.removeAllListeners('data');
-        }
+        adminPeer.removeListener('data', handleData);
       };
     }
+  }, [admin.id, adminPeer, game, setGame]);
 
-    return () => {};
-  }, [admin.id, adminPeer, game.players, setGame]);
-
-  const finalPlayers = admin.id === socket.id ? adminPlayers : game.players;
+  const finalPlayers = admin.id === (socket.id as string) ? adminPlayers : game.players;
   const finalPlayersPositions =
-    admin.id === socket.id ? adminPlayersPositions : playersPositions;
+    admin.id === (socket.id as string) ? adminPlayersPositions : playersPositions;
   const finalBallPosition =
-    admin.id === socket.id ? adminBallPosition : ballPosition;
+    admin.id === (socket.id as string) ? adminBallPosition : ballPosition;
 
   useEffect(() => {
     const cameraPosition = {
@@ -129,14 +123,14 @@ const Movables = () => {
       y: BOARD_SIZE.height / 2 + PLAYER_SIZE * 2,
     };
 
-    if (finalPlayers.get(socket.id)?.team === PlayerTeam.SPECTATOR) {
+    if (finalPlayers.get(socket.id as string)?.team === PlayerTeam.SPECTATOR) { // Type assertion to string if necessary
       const spectatingPosition = finalPlayersPositions[spectating];
 
       if (spectatingPosition) {
         [cameraPosition.x, cameraPosition.y] = spectatingPosition;
       }
     } else {
-      const myPosition = finalPlayersPositions[socket.id];
+      const myPosition = finalPlayersPositions[socket.id as string]; // Type assertion to string if necessary
       if (myPosition) {
         [cameraPosition.x, cameraPosition.y] = myPosition;
       }
@@ -146,10 +140,10 @@ const Movables = () => {
       setPosition(cameraPosition);
 
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [finalPlayersPositions, finalPlayers]);
+  }, [finalPlayersPositions, finalPlayers, position, spectating]);
 
-  if (ref.current) {
-    const ctx = ref.current.getContext('2d');
+  useEffect(() => {
+    const ctx = ref.current?.getContext('2d');
     if (ctx) {
       ctx.setTransform(1, 0, 0, 1, 0, 0);
       ctx.clearRect(
@@ -214,14 +208,14 @@ const Movables = () => {
         ctx.fillText(name, x, y + PLAYER_SIZE + 20);
       });
     }
-  }
+  }, [finalBallPosition, finalPlayers, finalPlayersPositions, camX, camY]);
 
   return (
     <>
-      {finalPlayers.get(socket.id)?.team === PlayerTeam.SPECTATOR && (
+      {finalPlayers.get(socket.id as string)?.team === PlayerTeam.SPECTATOR && (
         <SpectateControls
           setSpectating={(id) => setSpectating(id)}
-          spectating={spectating}
+          spectating={spectating || ''} // Ensure spectating is not undefined
         />
       )}
       <BallTracker ballPosition={finalBallPosition} />
