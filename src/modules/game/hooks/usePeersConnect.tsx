@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-
 import { toast } from 'react-toastify';
 import Peer from 'simple-peer';
 
@@ -36,7 +35,6 @@ export const usePeersConnect = () => {
       const promise = new Promise((resolve, reject) => {
         peer.once('connect', () => resolve('resolve'));
         peer.once('error', (err) => {
-          // eslint-disable-next-line no-console
           console.log(err);
           reject(err);
         });
@@ -99,7 +97,7 @@ export const usePeersConnect = () => {
         game.players.delete(game.admin.id);
         game.players.forEach(({ name }, id) => {
           const peer = new Peer({
-            initiator: false,
+            initiator: false, // Should this be false or true? Depending on your logic
             config: {
               iceServers: ICE_SERVERS,
             },
@@ -142,10 +140,8 @@ export const usePeersConnect = () => {
     };
   }, [
     admin.id,
-    admin.name,
     game,
     game.players,
-    names,
     peers,
     setAdmin,
     setGame,
@@ -185,38 +181,13 @@ export const usePeersConnect = () => {
   }, [peers]);
 
   useEffect(() => {
-    if (admin.id && admin.id !== socket.id && !peers.has(admin.id)) {
-      const peer = new Peer({
-        initiator: true,
-        config: {
-          iceServers: ICE_SERVERS,
-        },
-      });
-  
-      peer.once('error', () => setStatus(StatusPeer.ERROR));
-  
-      setPeers((prev) => new Map(prev).set(admin.id, peer));
-      setStatus(StatusPeer.CONNECTING);
-    }
-  
-    if (admin.id === socket.id) {
-      setStatus(StatusPeer.CONNECTED);
-    }
-  
-    // Ensure socket.id is defined before using it in the dependency array
-  }, [admin.id, peers, setPeers, setStatus, socket.id]);
-  
-
-  useEffect(() => {
     if (status === StatusPeer.CONNECTING) openModal(<Loader />, false);
     else if (status === StatusPeer.ERROR) openModal(<Error />, false);
     else if (status === StatusPeer.CONNECTED && game.started)
       openModal(<Menu />);
     else if (status === StatusPeer.CONNECTED && !game.started)
       openModal(<Menu />, false);
-
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [status]);
+  }, [status, game.started, openModal]);
 
   return names;
 };
