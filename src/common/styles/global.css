@@ -3,7 +3,7 @@
 @tailwind utilities;
 
 * {
-  @apply font-montserrat font-semibold ring-green-500 focus:outline-none focus:ring;
+  @apply font-montserrat font-semibold focus:outline-none;
 }
 
 @layer components {
@@ -16,7 +16,7 @@
   }
 
   .btn {
-    @apply gradient flex h-8 w-72 items-center justify-center gap-1 rounded-lg font-extrabold text-black transition-opacity hover:opacity-75 active:opacity-100;
+    @apply flex h-8 w-72 items-center justify-center gap-1 rounded-lg font-extrabold text-black transition-opacity  active:opacity-100;
   }
 }
 

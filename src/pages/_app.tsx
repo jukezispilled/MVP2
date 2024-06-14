@@ -13,10 +13,10 @@ const App = ({ Component, pageProps }: AppProps) => {
   return (
     <>
       <Head>
-        <title>BALLZONE - play now!</title>
-        <link rel="icon" href="/favicon.ico" />
+        <title>MVP - Most Valuable Pepe</title>
+        <link rel="icon" href="/favicon2.ico" />
         <meta
-          name="description"
+          name="Euro24 MVP"
           content="2D (top-down perspective) real-time game with 2 teams where players try to score a goal and win (like in soccer or hockey)."
         />
         <meta name="keywords" content="ball, game, soccer, football" />
