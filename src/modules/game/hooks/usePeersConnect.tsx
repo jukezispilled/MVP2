@@ -185,15 +185,27 @@ export const usePeersConnect = () => {
   }, [peers]);
 
   useEffect(() => {
-    if (game.admin.id === socket.id) {
-      setStatus(StatusPeer.CONNECTED);
-      return;
+    if (admin.id && admin.id !== socket.id && !peers.has(admin.id)) {
+      const peer = new Peer({
+        initiator: true,
+        config: {
+          iceServers: ICE_SERVERS,
+        },
+      });
+  
+      peer.once('error', () => setStatus(StatusPeer.ERROR));
+  
+      setPeers((prev) => new Map(prev).set(admin.id, peer));
+      setStatus(StatusPeer.CONNECTING);
     }
-
-    const me = game.players.has(socket.id);
-
-    if (me) setStatus(StatusPeer.CONNECTED);
-  }, [game, setStatus]);
+  
+    if (admin.id === socket.id) {
+      setStatus(StatusPeer.CONNECTED);
+    }
+  
+    // Ensure socket.id is defined before using it in the dependency array
+  }, [admin.id, peers, setPeers, setStatus, socket.id]);
+  
 
   useEffect(() => {
     if (status === StatusPeer.CONNECTING) openModal(<Loader />, false);
