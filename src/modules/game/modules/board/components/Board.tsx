@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-
 import { REAL_BOARD_SIZE } from '@/common/constants/settings';
 import { useGame } from '@/common/hooks/useGame';
 import { socket } from '@/common/libs/socket';
@@ -61,7 +60,7 @@ const Board = () => {
         alignItems: smallScreen ? 'flex-start' : 'center',
       }}
     >
-      {(game.paused || !game.started) && game.players.has(socket.id) && (
+      {(game.paused || !game.started) && socket.id && game.players.has(socket.id) && (
         <div className="absolute z-20 flex h-full w-full items-center justify-center bg-black/50 backdrop-blur-sm">
           {game.paused && game.started && <p className="text-6xl">PAUSED</p>}
           {!game.started && <p className="text-6xl">WAITING FOR START</p>}
